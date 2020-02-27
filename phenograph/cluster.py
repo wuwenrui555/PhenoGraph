@@ -166,6 +166,7 @@ def cluster(
         graph = sp.tril(sg, -1)
 
     # choose between Louvain or Leiden algorithm
+    communities, Q = "", ""
     if clustering_algo == "louvain":
         # write to file with unique id
         uid = uuid.uuid1().hex
@@ -205,11 +206,8 @@ def cluster(
         print("PhenoGraph complete in {} seconds".format(time.time() - tic), flush=True)
         communities = sort_by_size(communities, min_cluster_size)
 
-        Q = ""
-
     else:
         # return only graph object
-        communities = ""
-        Q = ""
+        pass
 
     return communities, graph, Q
