@@ -18,7 +18,7 @@ To install PhenoGraph, simply run the setup script:
 
 Or use:
 
-    pip3 install git+https://github.com/jacoblevine/phenograph.git
+    pip3 install git+https://github.com/dpeerlab/PhenoGraph.git
 
 
 Expected use is within a script or interactive kernel running Python `3.x`. Data are expected to be passed as a `numpy.ndarray`.
@@ -53,6 +53,11 @@ If you use PhenoGraph in work you publish, please cite our publication:
 Release Notes
 -------------
 
+### Version 1.5.3
+
+ * Phenograph supports now [**Leiden**](https://www.nature.com/articles/s41598-019-41695-z) algorithm for community detection.
+ The new feature can be called from `phenograph.cluster`, by choosing `leiden` as the clustering algorithm. 
+ 
 ### Version 1.5.2
 
  * Include simple parallel implementation of brute force nearest neighbors search using scipy's `cdist` and `multiprocessing`. This may be more efficient than `kdtree` on very large high-dimensional data sets

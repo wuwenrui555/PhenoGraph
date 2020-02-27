@@ -13,7 +13,7 @@ def random_walk_probabilities(A, labels):
     if sp.issparse(A):
         if not isinstance(A, sp.csr_matrix):
             A = A.tocsr()
-        D = sp.diags(A.sum(axis=1).flatten(), [0], shape=A.shape, format='csr')
+        D = sp.diags(A.sum(axis=1).flatten(), [0], shape=A.shape, format="csr")
         L = D - A
         seeds = labels != 0
         Lu = L[np.invert(seeds), :]  # unlabeled rows
@@ -34,7 +34,7 @@ def random_walk_probabilities(A, labels):
             s.extend(np.tile(1, sum(seeds == k)))
         i = np.arange(seeds.sum())
         j = labels[seeds] - 1
-        s = np.ones((seeds.sum(), ))
+        s = np.ones((seeds.sum(),))
         M = sp.coo_matrix((s, (i, j)), shape=(seeds.sum(), len(classes))).tocsc()
         # P = sp.linalg.spsolve(Lu.tocsc(), -BT.dot(M))
         # Use iterative solver
@@ -42,8 +42,11 @@ def random_walk_probabilities(A, labels):
         vals = [sp.linalg.isolve.bicgstab(Lu, b.T.todense()) for b in B.T]
         warnings = [x[1] for x in vals]
         if any(warnings):
-            print("Warning: iterative solver failed to converge in at least one case", flush=True)
-        P = normalize(np.vstack(tuple((x[0] for x in vals))).T, norm='l1')
+            print(
+                "Warning: iterative solver failed to converge in at least one case",
+                flush=True,
+            )
+        P = normalize(np.vstack(tuple((x[0] for x in vals))).T, norm="l1")
 
     else:
         D = np.diag(np.sum(A, axis=1))
@@ -60,7 +63,7 @@ def random_walk_probabilities(A, labels):
     return P
 
 
-def create_graph(data, k=30, metric='euclidean', n_jobs=-1):
+def create_graph(data, k=30, metric="euclidean", n_jobs=-1):
     # def _kernel(dxy, sigma=1):
     #     return np.exp(-dxy ** 2 / sigma)
 
@@ -73,17 +76,17 @@ def create_graph(data, k=30, metric='euclidean', n_jobs=-1):
     # s = np.concatenate(affinities)
     # graph = sp.coo_matrix((s, (i, j)), shape=(n, n)).tocsr()
     # graph = (graph + graph.transpose()).multiply(.5)
-    graph = neighbor_graph(jaccard_kernel, {'idx': idx})
+    graph = neighbor_graph(jaccard_kernel, {"idx": idx})
     # make symmetric
     # graph = (graph + graph.transpose()).multiply(.5)
     return graph
 
 
 def preprocess(train, test):
-    labels = np.zeros((test.shape[0], ), dtype=int)
+    labels = np.zeros((test.shape[0],), dtype=int)
     data = test
     for c, examples in enumerate(train):
-        labels = np.append(labels, np.tile(c+1, (examples.shape[0], )), axis=0)
+        labels = np.append(labels, np.tile(c + 1, (examples.shape[0],)), axis=0)
         data = np.append(data, examples, axis=0)
     # Check that results are valid
     if labels[-1] == 0:
@@ -95,7 +98,7 @@ def preprocess(train, test):
     return data, labels
 
 
-def classify(train, test, k=30, metric='euclidean', n_jobs=-1):
+def classify(train, test, k=30, metric="euclidean", n_jobs=-1):
     """
     Semi-supervised classification by random walks on a graph
     :param train: list of numpy arrays. Each array has a row for each class observation
@@ -109,4 +112,3 @@ def classify(train, test, k=30, metric='euclidean', n_jobs=-1):
     P = random_walk_probabilities(A, labels)
     c = np.argmax(P, axis=1)
     return c, P
-

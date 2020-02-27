@@ -12,7 +12,7 @@ import sys
 from .bruteforce_nn import knnsearch
 
 
-def find_neighbors(data, k=30, metric='minkowski', p=2, method='brute', n_jobs=-1):
+def find_neighbors(data, k=30, metric="minkowski", p=2, method="brute", n_jobs=-1):
     """
     Wraps sklearn.neighbors.NearestNeighbors
     Find k nearest neighbors of every point in data and delete self-distances
@@ -40,19 +40,24 @@ def find_neighbors(data, k=30, metric='minkowski', p=2, method='brute', n_jobs=-
     else:
         algorithm = "auto"
 
-    print("Finding {} nearest neighbors using {} metric and '{}' algorithm".format(k, metric, algorithm),
-          flush=True)
-    if method == 'kdtree':
-        nbrs = NearestNeighbors(n_neighbors=k+1,        # k+1 because results include self
-                                n_jobs=n_jobs,              # use multiple cores if possible
-                                metric=metric,          # primary metric
-                                p=p,                    # if metric == "minkowski", 2 --> euclidean, 1 --> manhattan
-                                algorithm=algorithm     # kd_tree is fastest for minkowski metrics
-                                ).fit(data)
+    print(
+        "Finding {} nearest neighbors using {} metric and '{}' algorithm".format(
+            k, metric, algorithm
+        ),
+        flush=True,
+    )
+    if method == "kdtree":
+        nbrs = NearestNeighbors(
+            n_neighbors=k + 1,  # k+1 because results include self
+            n_jobs=n_jobs,  # use multiple cores if possible
+            metric=metric,  # primary metric
+            p=p,  # if metric == "minkowski", 2 --> euclidean, 1 --> manhattan
+            algorithm=algorithm,  # kd_tree is fastest for minkowski metrics
+        ).fit(data)
         d, idx = nbrs.kneighbors(data)
 
-    elif method == 'brute':
-        d, idx = knnsearch(data, k+1, metric)
+    elif method == "brute":
+        d, idx = knnsearch(data, k + 1, metric)
 
     else:
         raise ValueError("Invalid argument to `method` parameters: {}".format(method))
@@ -77,7 +82,7 @@ def neighbor_graph(kernel, kernelargs):
     :return graph: n-by-n COO sparse matrix
     """
     i, j, s = kernel(**kernelargs)
-    n, k = kernelargs['idx'].shape
+    n, k = kernelargs["idx"].shape
     graph = sp.coo_matrix((s, (i, j)), shape=(n, n))
     return graph
 
@@ -96,7 +101,9 @@ def gaussian_kernel(idx, d, sigma):
     i = np.concatenate(np.array(i))
     j = np.concatenate(idx)
     d = np.concatenate(d)
-    f = np.vectorize(lambda x: 1/(sigma * (2 * np.pi) ** .5) * np.exp(-.5 * (x / sigma) ** 2))
+    f = np.vectorize(
+        lambda x: 1 / (sigma * (2 * np.pi) ** 0.5) * np.exp(-0.5 * (x / sigma) ** 2)
+    )
     # apply vectorized gaussian function
     p = f(d)
     return i, j, p
@@ -111,17 +118,21 @@ def jaccard_kernel(idx):
     n, k = idx.shape
     s = list()
     for i in range(n):
-        shared_neighbors = np.fromiter((len(set(idx[i]).intersection(set(idx[j]))) for j in idx[i]), dtype=float)
+        shared_neighbors = np.fromiter(
+            (len(set(idx[i]).intersection(set(idx[j]))) for j in idx[i]), dtype=float
+        )
         s.extend(shared_neighbors / (2 * k - shared_neighbors))
-    i = np.concatenate(np.array([np.tile(x, (k, )) for x in range(n)]))
+    i = np.concatenate(np.array([np.tile(x, (k,)) for x in range(n)]))
     j = np.concatenate(idx)
     return i, j, s
 
 
 def calc_jaccard(i, idx):
     """Compute the Jaccard coefficient between i and i's direct neighbors"""
-    coefficients = np.fromiter((len(set(idx[i]).intersection(set(idx[j]))) for j in idx[i]), dtype=float)
-    coefficients /= (2 * idx.shape[1] - coefficients)
+    coefficients = np.fromiter(
+        (len(set(idx[i]).intersection(set(idx[j]))) for j in idx[i]), dtype=float
+    )
+    coefficients /= 2 * idx.shape[1] - coefficients
     return idx[i], coefficients
 
 
@@ -161,17 +172,17 @@ def graph2binary(filename, graph):
     # add dummy self-edges for vertices at the END of the list with no neighbors
     ijmax = np.union1d(i, j).max()
     n = graph.shape[0]
-    missing = np.arange(ijmax+1, n)
+    missing = np.arange(ijmax + 1, n)
     for q in missing:
         ij = np.append(ij, [[q, q]], axis=0)
-        s = np.append(s, [0.], axis=0)
+        s = np.append(s, [0.0], axis=0)
     # Check data types: int32 for indices, float64 for weights
     if ij.dtype != np.int32:
-        ij = ij.astype('int32')
+        ij = ij.astype("int32")
     if s.dtype != np.float64:
-        s = s.astype('float64')
+        s = s.astype("float64")
     # write to file (NB f.writelines is ~10x faster than np.tofile(f))
-    with open(filename + '.bin', 'w+b') as f:
+    with open(filename + ".bin", "w+b") as f:
         f.writelines([e for t in zip(ij, s) for e in t])
     print("Wrote graph to binary file in {} seconds".format(time.time() - tic))
 
@@ -191,20 +202,21 @@ def runlouvain(filename, max_runs=100, time_limit=2000, tol=1e-3):
     :return communities: community assignments
     :return Q: modularity score corresponding to `communities`
     """
+
     def get_modularity(msg):
         # pattern = re.compile('modularity increased from -*0.\d+ to 0.\d+')
-        pattern = re.compile('modularity increased from -*\d.\d+e*-*\d+ to \d.\d+')
+        pattern = re.compile("modularity increased from -*\d.\d+e*-*\d+ to \d.\d+")
         matches = pattern.findall(msg.decode())
         q = list()
         for line in matches:
             q.append(line.split(sep=" ")[-1])
         return list(map(float, q))
 
-    print('Running Louvain modularity optimization', flush=True)
-    
+    print("Running Louvain modularity optimization", flush=True)
+
     # Use package location to find Louvain code
     # lpath = os.path.abspath(resource_filename(Requirement.parse("PhenoGraph"), 'louvain'))
-    lpath = os.path.join(os.path.dirname(__file__), 'louvain')
+    lpath = os.path.join(os.path.dirname(__file__), "louvain")
     try:
         assert os.path.isdir(lpath)
     except AssertionError:
@@ -224,8 +236,11 @@ def runlouvain(filename, max_runs=100, time_limit=2000, tol=1e-3):
         community_binary = "community"
         hierarchy_binary = "hierarchy"
     else:
-        raise RuntimeError("Operating system could not be determined or is not supported. "
-                           "sys.platform == {}".format(sys.platform), flush=True)
+        raise RuntimeError(
+            "Operating system could not be determined or is not supported. "
+            "sys.platform == {}".format(sys.platform),
+            flush=True,
+        )
     # Prepend appropriate path separator
     convert_binary = os.path.sep + convert_binary
     community_binary = os.path.sep + community_binary
@@ -234,8 +249,15 @@ def runlouvain(filename, max_runs=100, time_limit=2000, tol=1e-3):
     tic = time.time()
 
     # run convert
-    args = [lpath + convert_binary, '-i', filename + '.bin', '-o',
-            filename + '_graph.bin', '-w', filename + '_graph.weights']
+    args = [
+        lpath + convert_binary,
+        "-i",
+        filename + ".bin",
+        "-o",
+        filename + "_graph.bin",
+        "-w",
+        filename + "_graph.weights",
+    ]
     p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = p.communicate()
     # check for errors from convert
@@ -249,8 +271,16 @@ def runlouvain(filename, max_runs=100, time_limit=2000, tol=1e-3):
     while run - updated < 20 and run < max_runs and (time.time() - tic) < time_limit:
 
         # run community
-        fout = open(filename + '.tree', 'w')
-        args = [lpath + community_binary, filename + '_graph.bin', '-l', '-1', '-v', '-w', filename + '_graph.weights']
+        fout = open(filename + ".tree", "w")
+        args = [
+            lpath + community_binary,
+            filename + "_graph.bin",
+            "-l",
+            "-1",
+            "-v",
+            "-w",
+            filename + "_graph.weights",
+        ]
         p = subprocess.Popen(args, stdout=fout, stderr=subprocess.PIPE)
         # Here, we print communities to filename.tree and retain the modularity scores reported piped to stderr
         _, msg = p.communicate()
@@ -266,28 +296,35 @@ def runlouvain(filename, max_runs=100, time_limit=2000, tol=1e-3):
             updated = run
 
             # run hierarchy
-            args = [lpath + hierarchy_binary, filename + '.tree']
+            args = [lpath + hierarchy_binary, filename + ".tree"]
             p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out, err = p.communicate()
             # find number of levels in hierarchy and number of nodes in graph
-            nlevels = int(re.findall('\d+', out.decode())[0])
-            nnodes = int(re.findall('level 0: \d+', out.decode())[0].split(sep=" ")[-1])
+            nlevels = int(re.findall("\d+", out.decode())[0])
+            nnodes = int(re.findall("level 0: \d+", out.decode())[0].split(sep=" ")[-1])
 
             # get community assignments at each level in hierarchy
-            hierarchy = np.empty((nnodes, nlevels), dtype='int')
+            hierarchy = np.empty((nnodes, nlevels), dtype="int")
             for level in range(nlevels):
-                    args = [lpath + hierarchy_binary, filename + '.tree', '-l', str(level)]
-                    p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                    out, err = p.communicate()
-                    h = np.empty((nnodes,))
-                    for i, line in enumerate(out.decode().splitlines()):
-                        h[i] = int(line.split(sep=' ')[-1])
-                    hierarchy[:, level] = h
+                args = [lpath + hierarchy_binary, filename + ".tree", "-l", str(level)]
+                p = subprocess.Popen(
+                    args, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                )
+                out, err = p.communicate()
+                h = np.empty((nnodes,))
+                for i, line in enumerate(out.decode().splitlines()):
+                    h[i] = int(line.split(sep=" ")[-1])
+                hierarchy[:, level] = h
 
-            communities = hierarchy[:, nlevels-1]
+            communities = hierarchy[:, nlevels - 1]
 
-            print("After {} runs, maximum modularity is Q = {}".format(run, Q), flush=True)
+            print(
+                "After {} runs, maximum modularity is Q = {}".format(run, Q), flush=True
+            )
 
-    print("Louvain completed {} runs in {} seconds".format(run, time.time() - tic), flush=True)
+    print(
+        "Louvain completed {} runs in {} seconds".format(run, time.time() - tic),
+        flush=True,
+    )
 
     return communities, Q

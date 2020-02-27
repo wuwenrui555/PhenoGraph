@@ -15,8 +15,8 @@ import psutil
 
 
 def process_chunk(chunk, data, k, metric):
-    d = cdist(chunk, data, metric=metric).astype('float32')
-    p = np.argpartition(d, k).astype('int32')[:, :k]
+    d = cdist(chunk, data, metric=metric).astype("float32")
+    p = np.argpartition(d, k).astype("int32")[:, :k]
     rows = np.arange(chunk.shape[0])[:, None]
     d = d[rows, p]
     i = np.argsort(d)
@@ -69,7 +69,7 @@ def knnsearch(data, k, metric):
     in the subprocesses
     """
 
-    f = partial(process_chunk, **{'data': data, 'k': k, 'metric': metric})
+    f = partial(process_chunk, **{"data": data, "k": k, "metric": metric})
 
     n_chunks = determine_n_chunks(len(data), k)
 

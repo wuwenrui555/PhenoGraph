@@ -1,2 +1,3 @@
-from phenograph.cluster import cluster
-from phenograph.classify import classify
+from .cluster import cluster
+from .classify import classify
+from .version import __version__

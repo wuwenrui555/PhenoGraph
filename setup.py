@@ -5,20 +5,24 @@ import sys
 if sys.version_info.major != 3:
     raise RuntimeError("PhenoGraph requires Python 3")
 
+# get version
+with open("phenograph/version.py") as f:
+    exec(f.read())
+
 setup(
     name="PhenoGraph",
     description="Graph-based clustering for high-dimensional single-cell data",
-    version="1.5.2",
-    author="Jacob Levine",
-    author_email="jl3545@columbia.edu",
+    version=__version__,
+    author=__author__,
+    author_email=__email__,
     packages=find_packages(),
     package_data={
-        '': ['louvain/*convert*', 'louvain/*community*', 'louvain/*hierarchy*']
+        "": ["louvain/*convert*", "louvain/*community*", "louvain/*hierarchy*"]
     },
     include_package_data=True,
     zip_safe=False,
-    url="https://github.com/jacoblevine/PhenoGraph",
+    url="https://github.com/dpeerlab/PhenoGraph.git",
     license="LICENSE",
     long_description=open("README.md").read(),
-    install_requires=open("requirements.txt").read()
+    install_requires=open("requirements.txt").read(),
 )
