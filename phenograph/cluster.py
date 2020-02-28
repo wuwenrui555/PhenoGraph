@@ -65,37 +65,45 @@ def cluster(
     """
     PhenoGraph clustering
 
-    :param data: Numpy ndarray of data to cluster, or sparse matrix of k-nearest neighbor graph
+    :param data: Numpy ndarray of data to cluster, or sparse matrix of k-nearest
+        neighbor graph.
         If ndarray, n-by-d array of n cells in d dimensions
         If sparse matrix, n-by-n adjacency matrix
-    :param clustering_algo: Optional `'louvain'`, or `'leiden'`. Any other value will return only graph object.
+    :param clustering_algo: Optional `'louvain'`, or `'leiden'`. Any other value will
+        return only graph object.
     :param k: Number of nearest neighbors to use in first step of graph construction
-    :param directed: Whether to use a symmetric (default) or asymmetric ("directed") graph
-        The graph construction process produces a directed graph, which is symmetrized by one of two methods (see below)
-    :param prune: Whether to symmetrize by taking the average (prune=False) or product (prune=True) between the graph
+    :param directed: Whether to use a symmetric (default) or asymmetric ("directed")
+        graph
+        The graph construction process produces a directed graph, which is symmetrized
+        by one of two methods (see below)
+    :param prune: Whether to symmetrize by taking the average (prune=False) or product
+        (prune=True) between the graph
         and its transpose
-    :param min_cluster_size: Cells that end up in a cluster smaller than min_cluster_size are considered outliers
-        and are assigned to -1 in the cluster labels
+    :param min_cluster_size: Cells that end up in a cluster smaller than
+        min_cluster_size are considered outliers and are assigned to -1 in the cluster
+        labels
     :param jaccard: If True, use Jaccard metric between k-neighborhoods to build graph.
         If False, use a Gaussian kernel.
     :param primary_metric: Distance metric to define nearest neighbors.
         Options include: {'euclidean', 'manhattan', 'correlation', 'cosine'}
         Note that performance will be slower for correlation and cosine.
-    :param n_jobs: Nearest Neighbors and Jaccard coefficients will be computed in parallel using n_jobs. If n_jobs=-1,
-        the number of jobs is determined automatically
+    :param n_jobs: Nearest Neighbors and Jaccard coefficients will be computed in
+        parallel using n_jobs. If n_jobs=-1, the number of jobs is determined
+        automatically
     :param q_tol: Tolerance (i.e., precision) for monitoring modularity optimization
-    :param louvain_time_limit: Maximum number of seconds to run modularity optimization. If exceeded
-        the best result so far is returned
-    :param nn_method: Whether to use brute force or kdtree for nearest neighbor search. For very large high-dimensional
-        data sets, brute force (with parallel computation) performs faster than kdtree.
-    :param partition_type: Defaults to :class:`~leidenalg.RBConfigurationVertexPartition`.
-        For the available options, consult the documentation for :func:`~leidenalg.find_partition`.
-    :param resolution: A parameter value controlling the coarseness of the clustering in Leiden.
-        Higher values lead to more clusters.
-        Set to `None` if overriding `partition_type`
-        to one that doesn’t accept a `resolution_parameter`.
-    :param use_weights: If `True`, edge weights from the graph are used in the Leiden computation
-        (placing more emphasis on stronger edges).
+    :param louvain_time_limit: Maximum number of seconds to run modularity optimization.
+        If exceeded the best result so far is returned
+    :param nn_method: Whether to use brute force or kdtree for nearest neighbor search.
+        For very large high-dimensional data sets, brute force (with parallel
+        computation) performs faster than kdtree.
+    :param partition_type: Defaults to :class:`~leidenalg.RBConfigurationVertexPartition`
+        For the available options, consult the documentation for
+        :func:`~leidenalg.find_partition`.
+    :param resolution: A parameter value controlling the coarseness of the clustering in
+        Leiden. Higher values lead to more clusters. Set to `None` if overriding
+        `partition_type` to one that doesn’t accept a `resolution_parameter`.
+    :param use_weights: If `True`, edge weights from the graph are used in the Leiden
+        computation (placing more emphasis on stronger edges).
     :param seed: Leiden initialization of the optimization
 
     :return communities: numpy integer array of community assignments for each row in data
@@ -119,7 +127,8 @@ def cluster(
     # Go!
     if isinstance(data, sp.spmatrix) and data.shape[0] == data.shape[1]:
         print(
-            "Using neighbor information from provided graph, rather than computing neighbors directly",
+            "Using neighbor information from provided graph, "
+            "rather than computing neighbors directly",
             flush=True,
         )
         lilmatrix = data.tolil()
@@ -180,22 +189,20 @@ def cluster(
                 os.remove(f)
 
     elif clustering_algo == "leiden":
-        # run leiden algorithm
         # convert resulting graph from scipy.sparse.coo.coo_matrix to Graph object
-        vcount = max(graph.shape)
-        sources, targets = graph.nonzero()
-        edgelist = list(zip(sources.tolist(), targets.tolist()))
-        g = ig.Graph(vcount, edgelist, directed=directed)
-        weights = graph.toarray()[sources, targets]
-        g.es["weight"] = weights
+        # get indices of vertices
+        edgelist = np.vstack(graph.nonzero()).T.tolist()
+        g = ig.Graph(max(graph.shape), edgelist, directed=directed)
+        # set vertices as weights
+        g.es["weight"] = graph.toarray()[graph.nonzero()]
 
         kargs = dict()
-        if partition_type is None:
+        if not partition_type:
             partition_type = leidenalg.RBConfigurationVertexPartition
-        if resolution is not None:
+        if resolution:
             kargs["resolution_parameter"] = resolution
         if use_weights:
-            kargs["weights"] = np.array(g.es["weight"]).astype(np.float64)
+            kargs["weights"] = g.es["weight"]
         kargs["n_iterations"] = n_jobs
         kargs["seed"] = seed
 
