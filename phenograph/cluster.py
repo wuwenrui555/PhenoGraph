@@ -58,9 +58,9 @@ def cluster(
     louvain_time_limit: int = 2000,
     nn_method: Union["kdtree", "brute"] = "kdtree",
     partition_type: Optional[Type[MutableVertexPartition]] = None,
-    resolution: float = 1,
-    use_weights: bool = False,
-    seed=0,
+    resolution_parameter: float = 1,
+    use_weights: bool = True,
+    seed: int = 0,
 ):
     """
     PhenoGraph clustering
@@ -89,7 +89,10 @@ def cluster(
         Note that performance will be slower for correlation and cosine.
     :param n_jobs: Nearest Neighbors and Jaccard coefficients will be computed in
         parallel using n_jobs. If n_jobs=-1, the number of jobs is determined
-        automatically
+        automatically.  This parameter is passed to Leiden as `n_iterations`, the number
+        of iterations to run the Leiden algorithm. If the number of iterations is
+        negative, the Leiden algorithm is run until an iteration in which there was no
+        improvement.
     :param q_tol: Tolerance (i.e., precision) for monitoring modularity optimization
     :param louvain_time_limit: Maximum number of seconds to run modularity optimization.
         If exceeded the best result so far is returned
@@ -99,11 +102,10 @@ def cluster(
     :param partition_type: Defaults to :class:`~leidenalg.RBConfigurationVertexPartition`
         For the available options, consult the documentation for
         :func:`~leidenalg.find_partition`.
-    :param resolution: A parameter value controlling the coarseness of the clustering in
-        Leiden. Higher values lead to more clusters. Set to `None` if overriding
-        `partition_type` to one that doesn’t accept a `resolution_parameter`.
-    :param use_weights: If `True`, edge weights from the graph are used in the Leiden
-        computation (placing more emphasis on stronger edges).
+    :param resolution_parameter: A parameter value controlling the coarseness of the
+        clustering in Leiden. Higher values lead to more clusters. Set to `None` if
+        overriding `partition_type` to one that doesn’t accept a `resolution_parameter`.
+    :param use_weights: Use vertices in the Leiden computation.
     :param seed: Leiden initialization of the optimization
 
     :return communities: numpy integer array of community assignments for each row in data
@@ -194,24 +196,30 @@ def cluster(
         edgelist = np.vstack(graph.nonzero()).T.tolist()
         g = ig.Graph(max(graph.shape), edgelist, directed=directed)
         # set vertices as weights
-        g.es["weight"] = graph.toarray()[graph.nonzero()]
+        g.es["weights"] = graph.toarray()[graph.nonzero()]
 
         kargs = dict()
         if not partition_type:
             partition_type = leidenalg.RBConfigurationVertexPartition
-        if resolution:
-            kargs["resolution_parameter"] = resolution
+        if resolution_parameter:
+            kargs["resolution_parameter"] = resolution_parameter
         if use_weights:
-            kargs["weights"] = g.es["weight"]
+            kargs["weights"] = np.array(g.es["weights"]).astype("float64")
         kargs["n_iterations"] = n_jobs
         kargs["seed"] = seed
 
+        print("Running Leiden optimization", flush=True)
+        tic_ = time.time()
         communities = leidenalg.find_partition(
             g, partition_type=partition_type, **kargs,
+        )
+        print(
+            "Leiden completed in {} seconds".format(time.time() - tic_), flush=True,
         )
         communities = np.asarray(communities.membership)
         print("PhenoGraph complete in {} seconds".format(time.time() - tic), flush=True)
         communities = sort_by_size(communities, min_cluster_size)
+        Q = communities.q
 
     else:
         # return only graph object
