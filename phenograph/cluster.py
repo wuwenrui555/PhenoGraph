@@ -213,13 +213,13 @@ def cluster(
         communities = leidenalg.find_partition(
             g, partition_type=partition_type, **kargs,
         )
+        Q = communities.q
         print(
             "Leiden completed in {} seconds".format(time.time() - tic_), flush=True,
         )
         communities = np.asarray(communities.membership)
         print("PhenoGraph complete in {} seconds".format(time.time() - tic), flush=True)
         communities = sort_by_size(communities, min_cluster_size)
-        Q = communities.q
 
     else:
         # return only graph object
