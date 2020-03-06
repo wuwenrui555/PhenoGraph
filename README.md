@@ -14,11 +14,7 @@ Mac and Windows machines.
 
 To install PhenoGraph, simply run the setup script:
 
-    python3 setup.py install
-
-Or use:
-
-    pip3 install git+https://github.com/dpeerlab/PhenoGraph.git
+    pip install PhenoGraph
 
 
 Expected use is within a script or interactive kernel running Python `3.x`. Data are expected to be passed as a `numpy.ndarray`.
