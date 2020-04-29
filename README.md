@@ -49,6 +49,10 @@ If you use PhenoGraph in work you publish, please cite our publication:
 Release Notes
 -------------
 
+### Version 1.5.4
+
+ * Faster and more efficient sorting by size of clusters, for large nearest neighbours graph, implementing multiprocessing and faster methods for sorting.
+ 
 ### Version 1.5.3
 
  * Phenograph supports now [**Leiden**](https://www.nature.com/articles/s41598-019-41695-z) algorithm for community detection.
@@ -83,3 +87,36 @@ Release Notes
 ### Version 1.3
 
  * Proper support for Linux.
+
+---
+Troubleshooting
+---------------
+
+### Notebook freezes after several attempts of running PhenoGraph using Jypyter Notebook
+ 
+* Running `PhenoGraph` from a Jupyter Notebook repeatedly on macOS Catalina, but not Mojave,  using Python 3.7.6, causes a hang and the notebook becomes unresponsive, even for a basic matrix of nearest neighbors. However, this issue was not reproducible in command line using `Python` interpreter in both Catalina and Mojave platforms, without using Jupyter Notebook.
+  
+  It was found that attempting to plot principal components using 
+    
+    ```
+    :func:`~matplotlib.pyplot.scatter`
+    ```
+    
+  in Jupyter Notebook causes a freeze, and `PhenoGraph` becomes unresponsive unless the kernel is restarted. When removing this line of code, everything goes back to normal and the Jupyter Notebook stopes crashing with repeated runs of `PhenoGraph`. 
+  
+### Architecture related error
+
+* When attempting to process very large nearest neighbours graph, _e.g._ a 2000000 `x` 2000000 kNN graph matrix with 300 nearest neighbours, a `struct.error()` is raised: 
+  
+    ```python
+    struct.error: 'i' format requires -2147483648 <= number <= 2147483647
+    ```
+  
+  This issue was reported on [stackoverflow](https://stackoverflow.com/questions/47776486/python-struct-error-i-format-requires-2147483648-number-2147483647) and it's related to the multiprocessing while building the Jaccard object.
+  
+  The `struct.error()` has been fixed in python >= 3.8.0.
+    
+### `leidenalg` inside conda environment
+
+* When using `PhenoGraph` inside a conda environment `leiden` takes longer to complete for larger samples compared to the system Python. 
+

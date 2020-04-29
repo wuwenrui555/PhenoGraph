@@ -1,7 +1,12 @@
+import multiprocessing as mp
+import os
+import re
+import time
+import uuid
 from typing import Union, Optional, Type
 
-import leidenalg
 import igraph as ig
+import leidenalg
 import numpy as np
 from leidenalg.VertexPartition import MutableVertexPartition
 from scipy import sparse as sp
@@ -16,10 +21,21 @@ from phenograph.core import (
     graph2binary,
     runlouvain,
 )
-import time
-import re
-import os
-import uuid
+
+
+def chunk_clusters(cl):
+    for i in range(0, np.unique(cl).size, 5000):
+        yield np.unique(cl)[i : i + 5000]
+
+
+def yield_clusters(cl, ch):
+    for i in ch:
+        yield cl == i
+
+
+def get_sizes(func, args):
+    results = func(*args)
+    return [np.count_nonzero(res) for res in results]
 
 
 def sort_by_size(clusters, min_size):
@@ -31,14 +47,20 @@ def sort_by_size(clusters, min_size):
     :param min_size:
     :return: relabeled
     """
-    relabeled = np.zeros(clusters.shape, dtype=np.int)
-    sizes = [sum(clusters == x) for x in np.unique(clusters)]
+    p = mp.Pool(mp.cpu_count())
+    sizes = []
+    ch_clust = chunk_clusters(clusters)
+    TASKS = [(yield_clusters, (clusters, i)) for i in ch_clust]
+    results = [p.apply_async(get_sizes, t) for t in TASKS]
+    for res in results:
+        sizes.extend(res.get())
+
     o = np.argsort(sizes)[::-1]
-    for i, c in enumerate(o):
-        if sizes[c] > min_size:
-            relabeled[clusters == c] = i
-        else:
-            relabeled[clusters == c] = -1
+    my_dict = {c: i for i, c in enumerate(o) if sizes[c] > min_size}
+    my_dict.update({c: -1 for i, c in enumerate(o) if sizes[c] <= min_size})
+
+    relabeled = np.vectorize(my_dict.get)(clusters)
+
     return relabeled
 
 
@@ -77,8 +99,7 @@ def cluster(
         The graph construction process produces a directed graph, which is symmetrized
         by one of two methods (see below)
     :param prune: Whether to symmetrize by taking the average (prune=False) or product
-        (prune=True) between the graph
-        and its transpose
+        (prune=True) between the graph and its transpose
     :param min_cluster_size: Cells that end up in a cluster smaller than
         min_cluster_size are considered outliers and are assigned to -1 in the cluster
         labels
@@ -183,8 +204,12 @@ def cluster(
         uid = uuid.uuid1().hex
         graph2binary(uid, graph)
         communities, Q = runlouvain(uid, tol=q_tol, time_limit=louvain_time_limit)
-        print("PhenoGraph complete in {} seconds".format(time.time() - tic), flush=True)
+
+        print("Sorting communities by size, please wait ...", flush=True)
         communities = sort_by_size(communities, min_cluster_size)
+
+        print("PhenoGraph complete in {} seconds".format(time.time() - tic), flush=True)
+
         # clean up
         for f in os.listdir():
             if re.search(uid, f):
@@ -196,7 +221,7 @@ def cluster(
         edgelist = np.vstack(graph.nonzero()).T.tolist()
         g = ig.Graph(max(graph.shape), edgelist, directed=directed)
         # set vertices as weights
-        g.es["weights"] = graph.toarray()[graph.nonzero()]
+        g.es["weights"] = graph.data
 
         kargs = dict()
         if not partition_type:
@@ -218,8 +243,13 @@ def cluster(
             "Leiden completed in {} seconds".format(time.time() - tic_), flush=True,
         )
         communities = np.asarray(communities.membership)
-        print("PhenoGraph complete in {} seconds".format(time.time() - tic), flush=True)
+
+        print("Sorting communities by size, please wait ...", flush=True)
         communities = sort_by_size(communities, min_cluster_size)
+
+        print(
+            "PhenoGraph completed in {} seconds".format(time.time() - tic), flush=True
+        )
 
     else:
         # return only graph object
