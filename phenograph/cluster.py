@@ -3,7 +3,7 @@ import os
 import re
 import time
 import uuid
-from typing import Union, Optional, Type
+from typing import Union, Optional, Type, Tuple
 
 import igraph as ig
 import leidenalg
@@ -38,16 +38,33 @@ def get_sizes(func, args):
     return [np.count_nonzero(res) for res in results]
 
 
-def sort_by_size(clusters, min_size):
-    """
+def sort_by_size(clusters: np.array, min_size: int = 10, n_jobs: int = -1) -> np.array:
+    """\
     Relabel clustering in order of descending cluster size.
-    New labels are consecutive integers beginning at 0
-    Clusters that are smaller than min_size are assigned to -1
-    :param clusters:
-    :param min_size:
-    :return: relabeled
+    New labels are consecutive integers beginning at 0.
+    Clusters that are smaller than min_size are assigned to -1.
+
+    Parameters
+    ----------
+    clusters
+        Array of clusters to be sorted by size
+    min_size
+        Clusters smaller than this threshold are considered outliers and are assigned to
+        -1 in the cluster labels
+    n_jobs
+        Number of concurrently running workers. If 1 is given, no parallelism is used.
+        If set to -1, all CPUs are used. For n_jobs below -1, `n_cpus + 1 + n_jobs` are
+        used.
+
+    Returns
+    -------
+    Sorted array of clusters
     """
-    p = mp.Pool(mp.cpu_count())
+    if n_jobs == -1:
+        n_jobs = mp.cpu_count()
+    if n_jobs < -1:
+        n_jobs = mp.cpu_count() + 1 + n_jobs
+    p = mp.Pool(n_jobs)
     sizes = []
     ch_clust = chunk_clusters(clusters)
     TASKS = [(yield_clusters, (clusters, i)) for i in ch_clust]
@@ -81,57 +98,98 @@ def cluster(
     nn_method: Union["kdtree", "brute"] = "kdtree",
     partition_type: Optional[Type[MutableVertexPartition]] = None,
     resolution_parameter: float = 1,
+    n_iterations: int = -1,
     use_weights: bool = True,
-    seed: int = 0,
-):
-    """
+    seed: Optional[int] = None,
+    **kargs,
+) -> Tuple[np.array, spmatrix, float]:
+    """\
     PhenoGraph clustering
 
-    :param data: Numpy ndarray of data to cluster, or sparse matrix of k-nearest
-        neighbor graph.
-        If ndarray, n-by-d array of n cells in d dimensions
-        If sparse matrix, n-by-n adjacency matrix
-    :param clustering_algo: Optional `'louvain'`, or `'leiden'`. Any other value will
-        return only graph object.
-    :param k: Number of nearest neighbors to use in first step of graph construction
-    :param directed: Whether to use a symmetric (default) or asymmetric ("directed")
-        graph
+    Parameters
+    ----------
+    data
+        Numpy ndarray of data to cluster, or sparse matrix of k-nearest neighbor graph.
+        If ndarray, n-by-d array of n cells in d dimensions.
+        If sparse matrix, n-by-n adjacency matrix.
+    clustering_algo
+        Choose `'louvain'` or `'leiden'`. Any other value will return only graph object.
+    k
+        Number of nearest neighbors to use in first step of graph construction.
+    directed
+        Whether to use a symmetric (default) or asymmetric ("directed") graph.
         The graph construction process produces a directed graph, which is symmetrized
-        by one of two methods (see below)
-    :param prune: Whether to symmetrize by taking the average (prune=False) or product
-        (prune=True) between the graph and its transpose
-    :param min_cluster_size: Cells that end up in a cluster smaller than
-        min_cluster_size are considered outliers and are assigned to -1 in the cluster
-        labels
-    :param jaccard: If True, use Jaccard metric between k-neighborhoods to build graph.
+        by one of two methods (see below).
+    prune
+        Whether to symmetrize by taking the average (prune = False) or product
+        (prune = True) between the graph and its transpose.
+    min_cluster_size
+        Cells that end up in a cluster smaller than min_cluster_size are considered
+        outliers and are assigned to -1 in the cluster labels.
+    jaccard
+        If True, use Jaccard metric between k-neighborhoods to build graph.
         If False, use a Gaussian kernel.
-    :param primary_metric: Distance metric to define nearest neighbors.
-        Options include: {'euclidean', 'manhattan', 'correlation', 'cosine'}
-        Note that performance will be slower for correlation and cosine.
-    :param n_jobs: Nearest Neighbors and Jaccard coefficients will be computed in
-        parallel using n_jobs. If n_jobs=-1, the number of jobs is determined
-        automatically.  This parameter is passed to Leiden as `n_iterations`, the number
-        of iterations to run the Leiden algorithm. If the number of iterations is
+    primary_metric
+        Distance metric to define nearest neighbors. Options include: {'euclidean',
+        'manhattan', 'correlation', 'cosine'}. Note that performance will be slower for
+        `correlation` and `cosine`.
+    n_jobs
+        Nearest Neighbors and Jaccard coefficients will be computed in parallel using
+        n_jobs. If 1 is given, no parallelism is used. If set to -1, all CPUs are used.
+        For n_jobs below -1, `n_cpus + 1 + n_jobs` are used.
+    q_tol
+        Tolerance (i.e., precision) for monitoring modularity optimization
+    louvain_time_limit
+        Maximum number of seconds to run modularity optimization. If exceeded the best
+        result so far is returned.
+    nn_method
+        Whether to use brute force or kdtree for nearest neighbor search. For very large
+        high-dimensional data sets, brute force (with parallel computation) performs
+        faster than kdtree.
+    partition_type
+        Defaults to :class:`~leidenalg.RBConfigurationVertexPartition`. For the
+        available options, consult the documentation for
+        :func:`~leidenalg.find_partition`.
+    resolution_parameter
+        A parameter value controlling the coarseness of the clustering in Leiden. Higher
+        values lead to more clusters. Set to `None` if overriding `partition_type` to
+        one that doesn’t accept a `resolution_parameter`.
+    n_iterations
+        Number of iterations to run the Leiden algorithm. If the number of iterations is
         negative, the Leiden algorithm is run until an iteration in which there was no
         improvement.
-    :param q_tol: Tolerance (i.e., precision) for monitoring modularity optimization
-    :param louvain_time_limit: Maximum number of seconds to run modularity optimization.
-        If exceeded the best result so far is returned
-    :param nn_method: Whether to use brute force or kdtree for nearest neighbor search.
-        For very large high-dimensional data sets, brute force (with parallel
-        computation) performs faster than kdtree.
-    :param partition_type: Defaults to :class:`~leidenalg.RBConfigurationVertexPartition`
-        For the available options, consult the documentation for
-        :func:`~leidenalg.find_partition`.
-    :param resolution_parameter: A parameter value controlling the coarseness of the
-        clustering in Leiden. Higher values lead to more clusters. Set to `None` if
-        overriding `partition_type` to one that doesn’t accept a `resolution_parameter`.
-    :param use_weights: Use vertices in the Leiden computation.
-    :param seed: Leiden initialization of the optimization
+    use_weights
+        Use vertices in the Leiden computation.
+    seed
+        Leiden initialization of the optimization.
+    kargs
+        Additional arguments passed to :func:`~leidenalg.find_partition` and the
+        constructor of the `partition_type`.
 
-    :return communities: numpy integer array of community assignments for each row in data
-    :return graph: numpy sparse array of the graph that was used for clustering
-    :return Q: the modularity score for communities on graph
+    Returns
+    -------
+    communities
+        numpy integer array of community assignments for each row in data.
+    graph
+        numpy sparse array of the graph that was used for clustering.
+    Q
+        the modularity score for communities on graph.
+
+    Example
+    -------
+    >>> import phenograph
+    >>> import scipy.sparse
+    >>> import numpy as np
+
+    >>> N = 5000
+    >>> K = 30
+    >>> RowInd = np.repeat(np.arange(N), K)
+    >>> ColInd = np.tile(np.arange(N), K)
+    >>> Mat = scipy.sparse.csr_matrix(
+    ...     (np.ones(ColInd.shape), (RowInd, ColInd)), shape=(N, N)
+    ... )
+
+    >>> communities, graph, Q = phenograph.cluster(Mat, clustering_algo = 'leiden')
     """
 
     # NB if prune=True, graph must be undirected, and the prune setting takes precedence
@@ -159,7 +217,6 @@ def cluster(
         idx = np.vstack(lilmatrix.rows).astype("int32")  # neighbor indices by row
         del lilmatrix
         assert idx.shape[0] == data.shape[0]
-        k = idx.shape[1]
     else:
         d, idx = find_neighbors(
             data, k=k, metric=primary_metric, method=nn_method, n_jobs=n_jobs
@@ -223,14 +280,13 @@ def cluster(
         # set vertices as weights
         g.es["weights"] = graph.data
 
-        kargs = dict()
         if not partition_type:
             partition_type = leidenalg.RBConfigurationVertexPartition
         if resolution_parameter:
             kargs["resolution_parameter"] = resolution_parameter
         if use_weights:
             kargs["weights"] = np.array(g.es["weights"]).astype("float64")
-        kargs["n_iterations"] = n_jobs
+        kargs["n_iterations"] = n_iterations
         kargs["seed"] = seed
 
         print("Running Leiden optimization", flush=True)

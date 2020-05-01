@@ -49,6 +49,9 @@ If you use PhenoGraph in work you publish, please cite our publication:
 Release Notes
 -------------
 
+### Version 1.5.5
+ * Exposed parameter `n_iterations` for Leiden, along with minor fixes to manage sorting parallelism, and updated documentation of the clustering and sorting methods.
+
 ### Version 1.5.4
 
  * Faster and more efficient sorting by size of clusters, for large nearest neighbours graph, implementing multiprocessing and faster methods for sorting.
