@@ -72,6 +72,9 @@ def sort_by_size(clusters: np.array, min_size: int = 10, n_jobs: int = -1) -> np
     for res in results:
         sizes.extend(res.get())
 
+    p.close()
+    p.join()
+
     o = np.argsort(sizes)[::-1]
     my_dict = {c: i for i, c in enumerate(o) if sizes[c] > min_size}
     my_dict.update({c: -1 for i, c in enumerate(o) if sizes[c] <= min_size})
