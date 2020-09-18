@@ -1,4 +1,4 @@
-leidenalg >= 0.7.0
+leidenalg >= 0.8.1
 setuptools >= 18.0.1
 numpy >= 1.12
 scipy >= 1.5.1

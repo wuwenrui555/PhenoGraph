@@ -83,6 +83,90 @@ def sort_by_size(clusters: np.array, min_size: int = 10, n_jobs: int = -1) -> np
 
     return relabeled
 
+def run_leiden(
+    graph: sp.coo_matrix,
+    directed: bool,
+    partition_type: Optional[Type[MutableVertexPartition]],
+    resolution_parameter: float,
+    n_iterations: int,
+    seed: Optional[int],
+    use_weights: bool,
+    kargs
+    ) -> Tuple[np.ndarray, float] :
+    """
+    Wrapper for leiden community detection
+
+    Args:
+        graph (sp.coo_matrix): Affinity matrix
+        directed (bool): See below in 'cluster()'
+        partition_type (Optional[Type[MutableVertexPartition]]): See below in 'cluster()'
+        resolution_parameter (float): See below in 'cluster()'
+        n_iterations (int): See below in 'cluster()'
+        seed (Optional[int]): See below in 'cluster()'
+        use_weights (bool): See below in 'cluster()'
+        kargs: See below in 'cluster()'
+    
+    Returns:
+        communities, Q (Tuple[np.ndarray, float]): See below in 'cluster()'
+    """  
+
+    # convert resulting graph from scipy.sparse.coo.coo_matrix to Graph object
+    # get indices of vertices
+    edgelist = np.vstack(graph.nonzero()).T.tolist()
+    g = ig.Graph(max(graph.shape), edgelist, directed=directed)
+    # set vertices as weights
+    g.es["weights"] = graph.data
+
+    if not partition_type:
+        partition_type = leidenalg.RBConfigurationVertexPartition
+    if resolution_parameter:
+        kargs["resolution_parameter"] = resolution_parameter
+    if use_weights:
+        kargs["weights"] = np.array(g.es["weights"]).astype("float64")
+    kargs["n_iterations"] = n_iterations
+    kargs["seed"] = seed
+
+    print("Running Leiden optimization", flush=True)
+    tic_ = time.time()
+    communities = leidenalg.find_partition(
+        g, partition_type=partition_type, **kargs,
+    )
+    Q = communities.q
+    print(
+        "Leiden completed in {} seconds".format(time.time() - tic_), flush=True,
+    )
+    communities = np.asarray(communities.membership)
+
+    return communities, Q
+
+
+def run_louvain(
+    graph: sp.coo_matrix,
+    q_tol: float,
+    louvain_time_limit: int
+    ) -> Tuple[np.ndarray, float]:
+    """
+    Wrapper for Louvain community detection
+
+    Args:
+        graph (sp.coo_matrix): See below in 'cluster()'
+        q_tol (float): See below in 'cluster()'
+        louvain_time_limit (int): See below in 'cluster()'
+
+    Returns:
+        communities, Q (Tuple[np.ndarray, float]): See below in 'cluster()'
+    """    
+    # write to file with unique id
+    uid = uuid.uuid1().hex
+    graph2binary(uid, graph)
+    communities, Q = runlouvain(uid, tol=q_tol, time_limit=louvain_time_limit)
+
+    # clean up
+    for f in os.listdir():
+        if re.search(uid, f):
+            os.remove(f)
+    
+    return communities, Q
 
 def cluster(
     data: Union[np.ndarray, spmatrix],
@@ -260,58 +344,31 @@ def cluster(
     # choose between Louvain or Leiden algorithm
     communities, Q = "", ""
     if clustering_algo == "louvain":
-        # write to file with unique id
-        uid = uuid.uuid1().hex
-        graph2binary(uid, graph)
-        communities, Q = runlouvain(uid, tol=q_tol, time_limit=louvain_time_limit)
-
-        print("Sorting communities by size, please wait ...", flush=True)
-        communities = sort_by_size(communities, min_cluster_size)
-
-        print("PhenoGraph complete in {} seconds".format(time.time() - tic), flush=True)
-
-        # clean up
-        for f in os.listdir():
-            if re.search(uid, f):
-                os.remove(f)
+        communities, Q = run_louvain(
+                                    graph,
+                                    q_tol,
+                                    louvain_time_limit)
 
     elif clustering_algo == "leiden":
-        # convert resulting graph from scipy.sparse.coo.coo_matrix to Graph object
-        # get indices of vertices
-        edgelist = np.vstack(graph.nonzero()).T.tolist()
-        g = ig.Graph(max(graph.shape), edgelist, directed=directed)
-        # set vertices as weights
-        g.es["weights"] = graph.data
-
-        if not partition_type:
-            partition_type = leidenalg.RBConfigurationVertexPartition
-        if resolution_parameter:
-            kargs["resolution_parameter"] = resolution_parameter
-        if use_weights:
-            kargs["weights"] = np.array(g.es["weights"]).astype("float64")
-        kargs["n_iterations"] = n_iterations
-        kargs["seed"] = seed
-
-        print("Running Leiden optimization", flush=True)
-        tic_ = time.time()
-        communities = leidenalg.find_partition(
-            g, partition_type=partition_type, **kargs,
-        )
-        Q = communities.q
-        print(
-            "Leiden completed in {} seconds".format(time.time() - tic_), flush=True,
-        )
-        communities = np.asarray(communities.membership)
-
-        print("Sorting communities by size, please wait ...", flush=True)
-        communities = sort_by_size(communities, min_cluster_size)
-
-        print(
-            "PhenoGraph completed in {} seconds".format(time.time() - tic), flush=True
-        )
+        communities, Q = run_leiden(
+                                    graph,
+                                    directed, 
+                                    partition_type, 
+                                    resolution_parameter, 
+                                    n_iterations,
+                                    seed, 
+                                    use_weights,
+                                    kargs)
 
     else:
         # return only graph object
         pass
+    
+    print("Sorting communities by size, please wait ...", flush=True)
+    communities = sort_by_size(communities, min_cluster_size)
+
+    print(
+        "PhenoGraph completed in {} seconds".format(time.time() - tic), flush=True
+    )
 
     return communities, graph, Q
