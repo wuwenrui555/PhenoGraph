@@ -3,11 +3,7 @@
 
 name: PhenoGraph Unit Test
 
-on:
-  push:
-    branches: [ 1.5.7 ]
-  pull_request:
-    branches: [ 1.5.7 ]
+on: [push, pull_request]
 
 jobs:
   build:
