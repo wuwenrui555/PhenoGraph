@@ -155,7 +155,7 @@ Troubleshooting
 
 * When running unit tests, pytest may deliver the following warning `RuntimeWarning: numpy.ufunc size changed, may indicate binary incompatibility`. This is caused by an incompatability between newer versions of the pytest module and an older version of Python. Check your Python version with:
 
-    ```python
+    ```
     python --version
     ```
 
