@@ -5,9 +5,11 @@ import sys
 if sys.version_info.major != 3:
     raise RuntimeError("PhenoGraph requires Python 3")
 
+main_ns = {}
+
 # get version
 with open("phenograph/version.py") as f:
-    exec(f.read())
+    exec(f.read(), main_ns)
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
@@ -16,9 +18,9 @@ setup(
     description="Graph-based clustering for high-dimensional single-cell data",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    version=__version__,
-    author=__author__,
-    author_email=__email__,
+    version=main_ns["__version__"],
+    author=main_ns["__author__"],
+    author_email=main_ns["__email__"],
     packages=find_packages(),
     package_data={
         "": ["louvain/*convert*", "louvain/*community*", "louvain/*hierarchy*"]
