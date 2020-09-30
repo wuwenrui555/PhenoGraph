@@ -52,7 +52,7 @@ Release Notes
 ### Version 1.5.7
 
 * Updated leidenalg and scipy version requirements, revised parallel jaccard to support scipy==1.5.1, and created a test collection for use with pytest (see above)
-* Added [PhenoGraph clustering tutorial](examples\tutorial_pbmc3k.ipynb) w/ PBMC3K dataset from 10X Genomics (dataset included)
+* Added [PhenoGraph clustering tutorial](examples/tutorial_pbmc3k.ipynb) w/ PBMC3K dataset from 10X Genomics (dataset included)
 
 ### Version 1.5.6
 
