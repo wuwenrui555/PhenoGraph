@@ -83,6 +83,7 @@ def sort_by_size(clusters: np.array, min_size: int = 10, n_jobs: int = -1) -> np
 
     return relabeled
 
+
 def run_leiden(
     graph: sp.coo_matrix,
     directed: bool,
@@ -91,8 +92,8 @@ def run_leiden(
     n_iterations: int,
     seed: Optional[int],
     use_weights: bool,
-    kargs
-    ) -> Tuple[np.ndarray, float] :
+    kargs,
+) -> Tuple[np.ndarray, float]:
     """
     Wrapper for leiden community detection
 
@@ -105,10 +106,10 @@ def run_leiden(
         seed (Optional[int]): See below in 'cluster()'
         use_weights (bool): See below in 'cluster()'
         kargs: See below in 'cluster()'
-    
+
     Returns:
         communities, Q (Tuple[np.ndarray, float]): See below in 'cluster()'
-    """  
+    """
 
     # convert resulting graph from scipy.sparse.coo.coo_matrix to Graph object
     # get indices of vertices
@@ -129,11 +130,14 @@ def run_leiden(
     print("Running Leiden optimization", flush=True)
     tic_ = time.time()
     communities = leidenalg.find_partition(
-        g, partition_type=partition_type, **kargs,
+        g,
+        partition_type=partition_type,
+        **kargs,
     )
     Q = communities.q
     print(
-        "Leiden completed in {} seconds".format(time.time() - tic_), flush=True,
+        "Leiden completed in {} seconds".format(time.time() - tic_),
+        flush=True,
     )
     communities = np.asarray(communities.membership)
 
@@ -141,10 +145,8 @@ def run_leiden(
 
 
 def run_louvain(
-    graph: sp.coo_matrix,
-    q_tol: float,
-    louvain_time_limit: int
-    ) -> Tuple[np.ndarray, float]:
+    graph: sp.coo_matrix, q_tol: float, louvain_time_limit: int
+) -> Tuple[np.ndarray, float]:
     """
     Wrapper for Louvain community detection
 
@@ -155,7 +157,7 @@ def run_louvain(
 
     Returns:
         communities, Q (Tuple[np.ndarray, float]): See below in 'cluster()'
-    """    
+    """
     # write to file with unique id
     uid = uuid.uuid1().hex
     graph2binary(uid, graph)
@@ -165,8 +167,9 @@ def run_louvain(
     for f in os.listdir():
         if re.search(uid, f):
             os.remove(f)
-    
+
     return communities, Q
+
 
 def cluster(
     data: Union[np.ndarray, spmatrix],
@@ -344,31 +347,27 @@ def cluster(
     # choose between Louvain or Leiden algorithm
     communities, Q = "", ""
     if clustering_algo == "louvain":
-        communities, Q = run_louvain(
-                                    graph,
-                                    q_tol,
-                                    louvain_time_limit)
+        communities, Q = run_louvain(graph, q_tol, louvain_time_limit)
 
     elif clustering_algo == "leiden":
         communities, Q = run_leiden(
-                                    graph,
-                                    directed, 
-                                    partition_type, 
-                                    resolution_parameter, 
-                                    n_iterations,
-                                    seed, 
-                                    use_weights,
-                                    kargs)
+            graph,
+            directed,
+            partition_type,
+            resolution_parameter,
+            n_iterations,
+            seed,
+            use_weights,
+            kargs,
+        )
 
     else:
         # return only graph object
         pass
-    
+
     print("Sorting communities by size, please wait ...", flush=True)
     communities = sort_by_size(communities, min_cluster_size)
 
-    print(
-        "PhenoGraph completed in {} seconds".format(time.time() - tic), flush=True
-    )
+    print("PhenoGraph completed in {} seconds".format(time.time() - tic), flush=True)
 
     return communities, graph, Q
