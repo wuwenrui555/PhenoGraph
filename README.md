@@ -49,6 +49,11 @@ If you use PhenoGraph in work you publish, please cite our publication:
 Release Notes
 -------------
 
+### Version 1.5.7
+
+* Updated leidenalg and scipy version requirements, revised parallel jaccard to support scipy==1.5.1, and created a test collection for use with pytest (see above)
+* Added [PhenoGraph clustering tutorial](examples\tutorial_pbmc3k.ipynb) w/ PBMC3K dataset from 10X Genomics (dataset included)
+
 ### Version 1.5.6
 
 * Fix the multiprocessing code that doesn't close/join the pool.
@@ -96,6 +101,25 @@ Release Notes
 * Proper support for Linux.
 
 ---
+Running the Unit Tests
+---------------
+
+Unit tests for assessing the functionality of each module are included in the 'tests\' directory. In addition to the dependencies required by PhenoGraph, to run these tests, you must first install the [pytest](https://docs.pytest.org) module. 
+
+If your system uses Python >= 3.8.0 or greater, install pytest with:
+
+    pip install pytest #Python >= 3.8.0
+
+Otherwise, install pytest with:
+
+    pip install pytest==6.0.2 #Python < 3.8.0
+
+Once pytest is installed, navigate to the 'PhenoGraph/' directory and run with:
+
+    pytest
+
+All tests should pass with no warnings.
+
 Troubleshooting
 ---------------
 
@@ -126,4 +150,12 @@ Troubleshooting
 ### `leidenalg` inside conda environment
 
 * When using `PhenoGraph` inside a conda environment `leiden` takes longer to complete for larger samples compared to the system Python.
+
+### `numpy.ufunc` runtime warning when running pytest
+
+* When running unit tests, pytest may deliver the following warning `RuntimeWarning: numpy.ufunc size changed, may indicate binary incompatibility`. This is caused by an incompatability between newer versions of the pytest module and an older version of Python. Check your Python version with:
+
+    python --version
+
+  If using Python >= 3.8.0, all version of pytest are compatible. If using Python < 3.8.0, downgrade to pytest version 6.0.2 (see above).
 
