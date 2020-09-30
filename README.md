@@ -1,33 +1,23 @@
 PhenoGraph for Python3
 ======================
 
-[PhenoGraph](http://www.cell.com/cell/abstract/S0092-8674(15)00637-6) is a clustering method designed for
-high-dimensional single-cell data. It works by creating a graph ("network") representing phenotypic similarities
-between cells and then identifying communities in this graph.
+[PhenoGraph](http://www.cell.com/cell/abstract/S0092-8674(15)00637-6) is a clustering method designed for high-dimensional single-cell data. It works by creating a graph ("network") representing phenotypic similarities between cells and then identifying communities in this graph.
 
-This implementation is written in Python3 and depends only on `scikit-learn (>= 0.17)` and its dependencies.
-
-This software package includes compiled binaries that run community detection based on C++ code written by
-E. Lefebvre and J.-L. Guillaume in 2008 (["Louvain method"](https://sites.google.com/site/findcommunities/)). The code
-has been altered to interface more efficiently with the Python code here. It should work on reasonably current Linux,
-Mac and Windows machines.
+This software package includes compiled binaries that run community detection based on C++ code written by E. Lefebvre and J.-L. Guillaume in 2008 (["Louvain method"](https://sites.google.com/site/findcommunities/)). The code has been altered to interface more efficiently with the Python code here. It should work on reasonably current Linux, Mac and Windows machines.
 
 To install PhenoGraph, simply run the setup script:
 
     pip install PhenoGraph
 
 
-Expected use is within a script or interactive kernel running Python `3.x`. Data are expected to be passed as a `numpy.ndarray`.
-When applicable, the code uses CPU multicore parallelism via `multiprocessing`.
+Expected use is within a script or interactive kernel running Python `3.x`. Data are expected to be passed as a `numpy.ndarray`. When applicable, the code uses CPU multicore parallelism via `multiprocessing`.
 
 To run basic clustering:
 
     import phenograph
     communities, graph, Q = phenograph.cluster(data)
 
-For a dataset of *N* rows, `communities` will be a length *N* vector of integers specifying a community assignment for each row
-in the data. Any rows assigned `-1` were identified as *outliers* and should not be considered as a member of any community.
-`graph` is a *N* x *N* `scipy.sparse` matrix representing the weighted graph used for community detection.
+For a dataset of *N* rows, `communities` will be a length *N* vector of integers specifying a community assignment for each row in the data. Any rows assigned `-1` were identified as *outliers* and should not be considered as a member of any community. `graph` is a *N* x *N* `scipy.sparse` matrix representing the weighted graph used for community detection.
 `Q` is the modularity score for `communities` as applied to `graph`.
 
 If you use PhenoGraph in work you publish, please cite our publication:
@@ -52,7 +42,7 @@ Release Notes
 ### Version 1.5.7
 
 * Updated leidenalg and scipy version requirements, revised parallel jaccard to support scipy==1.5.1, and created a test collection for use with pytest (see [below](#running-the-unit-tests)).
-* Added [PhenoGraph clustering tutorial](examples/tutorial_pbmc3k.ipynb) w/ PBMC3K dataset from 10X Genomics (dataset included).
+* Added [PhenoGraph clustering tutorial](examples/tutorial_pbmc3k.ipynb) with PBMC3K dataset from 10X Genomics (dataset included).
 
 ### Version 1.5.6
 
@@ -104,7 +94,7 @@ Release Notes
 Running the Unit Tests
 ---------------
 
-Unit tests for assessing the functionality of each module are included in the 'tests\' directory. In addition to the dependencies required by PhenoGraph, to run these tests, you must first install the [pytest](https://docs.pytest.org) module. 
+Unit tests for assessing the functionality of each module are included in the 'tests\' directory. In addition to the dependencies required by PhenoGraph, to run these tests, you must first install the [pytest](https://docs.pytest.org) module.
 
 If your system uses Python >= 3.8.0 or greater, install pytest with:
 
