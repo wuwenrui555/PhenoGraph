@@ -3,3 +3,5 @@
 *__pycache__*
 build/*
 **/.ipynb_checkpoints
+.DS_Store
+examples/cache/

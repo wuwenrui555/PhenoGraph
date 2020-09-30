@@ -39,7 +39,9 @@ def random_walk_probabilities(A, labels):
         # P = sp.linalg.spsolve(Lu.tocsc(), -BT.dot(M))
         # Use iterative solver
         B = -BT.dot(M)
-        vals = [sp.linalg.isolve.bicgstab(Lu, b.T.todense()) for b in B.T]
+        vals = [
+            sp.linalg.isolve.bicgstab(Lu, b.T.todense(), atol="legacy") for b in B.T
+        ]
         warnings = [x[1] for x in vals]
         if any(warnings):
             print(
