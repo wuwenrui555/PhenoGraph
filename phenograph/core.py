@@ -205,7 +205,7 @@ def runlouvain(filename, max_runs=100, time_limit=2000, tol=1e-3):
 
     def get_modularity(msg):
         # pattern = re.compile('modularity increased from -*0.\d+ to 0.\d+')
-        pattern = re.compile("modularity increased from -*\d.\d+e*-*\d+ to \d.\d+")
+        pattern = re.compile(r"modularity increased from -*\d.\d+e*-*\d+ to \d.\d+")
         matches = pattern.findall(msg.decode())
         q = list()
         for line in matches:
@@ -300,8 +300,10 @@ def runlouvain(filename, max_runs=100, time_limit=2000, tol=1e-3):
             p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out, err = p.communicate()
             # find number of levels in hierarchy and number of nodes in graph
-            nlevels = int(re.findall("\d+", out.decode())[0])
-            nnodes = int(re.findall("level 0: \d+", out.decode())[0].split(sep=" ")[-1])
+            nlevels = int(re.findall(r"\d+", out.decode())[0])
+            nnodes = int(
+                re.findall(r"level 0: \d+", out.decode())[0].split(sep=" ")[-1]
+            )
 
             # get community assignments at each level in hierarchy
             hierarchy = np.empty((nnodes, nlevels), dtype="int")
