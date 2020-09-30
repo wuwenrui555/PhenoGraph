@@ -51,8 +51,8 @@ Release Notes
 
 ### Version 1.5.7
 
-* Updated leidenalg and scipy version requirements, revised parallel jaccard to support scipy==1.5.1, and created a test collection for use with pytest (see above)
-* Added [PhenoGraph clustering tutorial](examples/tutorial_pbmc3k.ipynb) w/ PBMC3K dataset from 10X Genomics (dataset included)
+* Updated leidenalg and scipy version requirements, revised parallel jaccard to support scipy==1.5.1, and created a test collection for use with pytest (see [below](#running-the-unit-tests)).
+* Added [PhenoGraph clustering tutorial](examples/tutorial_pbmc3k.ipynb) w/ PBMC3K dataset from 10X Genomics (dataset included).
 
 ### Version 1.5.6
 
@@ -157,5 +157,5 @@ Troubleshooting
 
     python --version
 
-  If using Python >= 3.8.0, all version of pytest are compatible. If using Python < 3.8.0, downgrade to pytest version 6.0.2 (see above).
+If using Python >= 3.8.0, all version of pytest are compatible. If using Python < 3.8.0, downgrade to pytest version 6.0.2 (see above).
 
