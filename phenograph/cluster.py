@@ -287,11 +287,12 @@ def cluster(
         print("Setting directed=False because prune=True")
         directed = False
 
+    kernelargs = {}
     if n_jobs == 1:
         kernel = jaccard_kernel
     else:
+        kernelargs["n_jobs"] = n_jobs
         kernel = parallel_jaccard_kernel
-    kernelargs = {}
 
     # Start timer
     tic = time.time()

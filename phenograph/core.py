@@ -1,6 +1,6 @@
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
-from multiprocessing import Pool
+from multiprocessing import Pool, cpu_count
 from contextlib import closing
 from itertools import repeat
 from scipy import sparse as sp
@@ -136,14 +136,30 @@ def calc_jaccard(i, idx):
     return idx[i], coefficients
 
 
-def parallel_jaccard_kernel(idx):
+def parallel_jaccard_kernel(idx, n_jobs=-1):
     """Compute Jaccard coefficient between nearest-neighbor sets in parallel
-    :param idx: n-by-k integer matrix of k-nearest neighbors
 
-    :return (i, j, s): row indices, column indices, and nonzero values for a sparse adjacency matrix
+    Parameters
+    ----------
+    idx
+        n-by-k integer matrix of k-nearest neighbors
+    n_jobs
+        Number of concurrently running workers. If 1 is given, no parallelism is
+        used. If set to -1, all CPUs are used. For n_jobs below -1, `n_cpus + 1 + n_jobs`
+        are used.
+
+    Returns
+    -------
+    i, j, s
+        row indices, column indices, and nonzero values for a sparse adjacency matrix
     """
+    if n_jobs == -1:
+        n_jobs = cpu_count()
+    if n_jobs < -1:
+        n_jobs = cpu_count() + 1 + n_jobs
+
     n = len(idx)
-    with closing(Pool()) as pool:
+    with closing(Pool(n_jobs)) as pool:
         jaccard_values = pool.starmap(calc_jaccard, zip(range(n), repeat(idx)))
 
     graph = sp.lil_matrix((n, n), dtype=float)
